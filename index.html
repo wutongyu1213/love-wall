@@ -514,7 +514,7 @@ const uk=userKey();const lastKey="wallLastPost_"+uk;const lastTs=parseInt(localS
 const elapsed=(Date.now()-lastTs)/1000;
 if(elapsed<POST_MIN_INTERVAL){toast("发布太快，请 "+Math.ceil(POST_MIN_INTERVAL-elapsed)+" 秒后再试");return}
 busy=true;
-const {error}=await sb.from("wall").insert({nickname:name,target_name:to,grade_year:year,class_no:cls,love_tag:tag,sender_gender:fromG,target_gender:toG,love_msg:msg,like_count:0,created_ts:Date.now(),status:"ok",gift:pickedGift||null});
+const {error}=await sb.from("wall").insert({nickname:name,target_name:to,grade_year:year,class_no:cls,love_tag:tag,sender_gender:fromG,target_gender:toG,love_msg:msg,like_count:0,created_ts:Date.now(),status:"ok",gift:pickedGift||null,user_key:uk});
 busy=false;
 if(error){toast("提交失败："+error.message);return}
 localStorage.setItem(lastKey,String(Date.now()));
