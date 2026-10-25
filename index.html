@@ -316,7 +316,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;letter-spacing:2px;m
       <span class="chip">谢谢你 🌟</span>
       <span class="chip">想你了 🌙</span>
     </div>
-    <button class="btn" id="postBtn">贴上表白墙 →</button>
+    <div class="consent-row" style="display:flex;gap:8px;align-items:flex-start;margin:10px 0 4px;font-size:12px;color:#8a5a68;line-height:1.6"><input type="checkbox" id="inConsent" style="margin-top:2px"><label for="inConsent" style="margin:0">我已了解：本墙公开显示对象的<b>真实姓名</b>与班级，可能被他人看到。请只在<b>自愿</b>情况下发表，勿发布自己或他人的侮辱、骚扰内容；若被表白对象或本人/家长希望下架，可点举报，管理方会尽快处理。</label></div><button class="btn" id="postBtn">贴上表白墙 →</button>
     </div>
   </section>
   <div class="main-grid">
@@ -382,7 +382,7 @@ const sb=window.supabase.createClient(SUPA_URL,SUPA_KEY);
 const EDGE_URL=SUPA_URL+"/functions/v1/wall-cache";
 let __edgeOk=true;let __edgeGifts=null;
 async function edgeFetch(limit){const u=EDGE_URL+"?limit="+limit;const r=await fetch(u,{headers:{apikey:SUPA_KEY,Authorization:"Bearer "+SUPA_KEY}});if(!r.ok)throw new Error("edge "+r.status);const j=await r.json();if(!j||!j.ok)throw new Error("edge bad");return j}
-const ADMIN_PWD="xiaobao1213";
+/* 管理鉴权已移至 Edge 函数环境变量 ADMIN_PWD，前端不再存明文密码 */
 /* 修复 D：海报/二维码指向单条（?post=id），扫出来能直达定位 */
 const SITE_BASE=(location.protocol==="http:"||location.protocol==="https:")?location.origin+"/":"https://love-wall.pages.dev/";
 const SITE_URL=SITE_BASE;
@@ -422,7 +422,7 @@ busy=false;shownCount=PAGE;render();return;}catch(e){__edgeOk=false;console.log(
 const {data,error}=await sb.from("wall").select("*").eq("status","ok").order("created_ts",{ascending:false}).limit(lim);busy=false;if(error){console.error(error);loadState("加载失败，点击重试",false);document.getElementById("loadState").onclick=load}else if(data){wall=data.map(r=>({id:r.id,name:r.nickname||"匿名",to:r.target_name||"心里的那个人",year:r.grade_year||"2027",cls:r.class_no||"1",tag:r.love_tag||"喜欢",fromG:r.sender_gender||"男",toG:r.target_gender||"男",msg:r.love_msg||"",likes:r.like_count||0,ts:r.created_ts||Date.now(),anon:r.nickname=="",gift:r.gift||"",dislikes:r.dislike_count||0}));const gq=await sb.from("card_gifts").select("wall_id,gift");giftByWall={};(gq.data||[]).forEach(x=>{(giftByWall[x.wall_id]=giftByWall[x.wall_id]||[]).push(x.gift)});shownCount=PAGE;render()}else{loadState("这里还没有表白，快写下第一条吧",false)}}
 /* 修复 C：统计"署名的人"只算有昵称的，匿名不算重名 */
 function stats(){document.getElementById("stMsg").textContent=wall.length;document.getElementById("stPeople").textContent=new Set(wall.filter(x=>x.name&&x.name!=="匿名"&&x.name!=="神秘人").map(x=>x.name)).size;document.getElementById("stLove").textContent=wall.reduce((a,b)=>a+(b.likes||0),0)}
-async function loadVisits(){try{const {count}=await sb.from("visits").select("id",{count:"exact",head:true});document.getElementById("stVisit").textContent=(count||0)}catch(e){}}
+async function loadVisits(){try{const {data}=await sb.from("visit_counter").select("total").limit(1);const v=(data&&data[0])?data[0].total:0;document.getElementById("stVisit").textContent=v}catch(e){try{const {count}=await sb.from("visits").select("id",{count:"exact",head:true});document.getElementById("stVisit").textContent=(count||0)}catch(_){}}}
 function recordVisit(){let vk=localStorage.getItem("wallVisitKey");if(!vk){vk="v"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("wallVisitKey",vk)}try{sb.from("visits").insert({visit_key:vk}).then(function(){}).catch(function(){});}catch(e){}}
 function renderHot(){const wrap=document.getElementById("hotWrap");if(wall.length===0){wrap.innerHTML="";return}const hot=wall.slice().sort((a,b)=>(b.likes||0)-(a.likes||0))[0];wrap.innerHTML='<div class="hot-banner"><div class="icon">🏆</div><div class="txt"><div class="lbl">全场最热 · 点赞最多</div><div class="who">'+esc(hot.name)+'<span class="to">→ '+esc(hot.to)+'</span></div></div><div class="likes">'+(hot.likes||0)+'<small>❤ 点赞</small></div></div>'}
 function renderRank(){const rp=document.getElementById("rankPanel");if(!rp)return;const rl=document.getElementById("rankList");if(!wall.length){rl.innerHTML='<div class="rank-empty">还没有表白，快写下第一条</div>';return}
@@ -478,11 +478,29 @@ if(myT==="up"){c.likes=(c.likes||0)+1;likedSet.add(id);saveLiked()}else{c.dislik
 render();toast(myT==="up"?"已点赞 💗":"已点倒赞 👎")}
 function bindLikes(){document.querySelectorAll("[data-like]").forEach(el=>{el.onclick=()=>likeItem(el.dataset.like,"up")});document.querySelectorAll("[data-dislike]").forEach(el=>{el.onclick=()=>likeItem(el.dataset.dislike,"down")})}
 
-let adminMode=false;
+let adminMode=false;let adminPwd="";
 function enterAdmin(){adminMode=true;document.body.classList.add("admin-mode");toast("管理员模式已开启 🛡️");bindAdminDel()}
-function bindAdminDel(){if(!adminMode)return;document.querySelectorAll("[data-admin-del]").forEach(el=>{el.onclick=async()=>{if(!confirm("确定隐藏这条表白？"))return;const id=el.dataset.adminDel;const {error}=await sb.from("wall").update({status:"hidden"}).eq("id",Number(id));if(error){toast("删除失败："+error.message);return}wall=wall.filter(x=>x.id!=id);render();toast("已隐藏这条表白 🗑️")}})}
+function bindAdminDel(){
+  if(!adminMode) return;
+  document.querySelectorAll("[data-admin-del]").forEach(function(el){
+    el.onclick = async function(){
+      if(!confirm("确定隐藏这条表白？")) return;
+      var id = el.dataset.adminDel;
+      try{
+        var r = await fetch(EDGE_URL+"?admin="+encodeURIComponent(adminPwd)+"&act=hide&id="+id, {headers:{apikey:SUPA_KEY,Authorization:"Bearer "+SUPA_KEY}});
+        var j = await r.json();
+        if(!j || !j.ok){ toast("隐藏失败：需在 Edge 配置 ADMIN_PWD"); return; }
+        wall = wall.filter(function(x){ return x.id != id; });
+        render();
+        toast("已隐藏这条表白 🗑️");
+      } catch(err){
+        toast("隐藏失败："+err.message);
+      }
+    };
+  });
+}
 /* 修复 E：移除 ?admin= URL 参数入口，只保留点 footer 输密码 */
-document.getElementById("footer").onclick=()=>{if(adminMode)return;const p=prompt("输入管理密码：");if(p===ADMIN_PWD)enterAdmin();else if(p!==null)toast("密码错误")};function bindPoster(){document.querySelectorAll("[data-poster]").forEach(el=>{el.onclick=()=>makePoster(el.dataset.poster)})}
+document.getElementById("footer").onclick=()=>{if(adminMode)return;const p=prompt("输入管理密码（已存 Edge 函数）：");if(p&&p.length>=6){adminPwd=p;enterAdmin();}else if(p!==null)toast("密码错误")};function bindPoster(){document.querySelectorAll("[data-poster]").forEach(el=>{el.onclick=()=>makePoster(el.dataset.poster)})}
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 function wrapText(ctx,text,x,y,maxW,lh,maxLines){var s=String(text==null?"":text);ctx.save();ctx.textAlign="left";ctx.fillStyle="#4a2230";var lines=String(s).split(/\n/);var ly=y;var count=0;for(var p2=0;p2<lines.length;p2++){var seg=lines[p2];var chunk="";for(var k=0;k<seg.length;k++){var ch=seg[k];if(chunk&&ctx.measureText(chunk+ch).width>maxW){ctx.fillText(chunk,x,ly);ly+=lh;count++;chunk=ch;if(maxLines&&count>=maxLines){ctx.restore();return;}}else{chunk+=ch;}}if(chunk){ctx.fillText(chunk,x,ly);ly+=lh;count++;if(maxLines&&count>=maxLines){ctx.restore();return;}}}ctx.restore();}
 function legacyCopy(txt){try{var ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.focus();ta.select();var ok=document.execCommand("copy");document.body.removeChild(ta);return Promise.resolve(!!ok);}catch(e){return Promise.resolve(false);}}
@@ -522,6 +540,7 @@ const year=document.getElementById("inYear").value;const cls=document.getElement
 const tag=document.getElementById("inTag").value;const fromG=document.getElementById("inFrom").value;const toG=document.getElementById("inToG").value;
 const msg=document.getElementById("inMsg").value.trim();
 if(!msg){toast("先写点想说的话吧 ✍️");return}
+if(!document.getElementById("inConsent").checked){toast("请先勾选了解真实姓名会公开显示（自愿原则）再发 ✍️");return}
 await ensureBadWords();const allText=name+" "+to+" "+msg;if(!passFilter(allText)||hitAdClient(allText)){toast("内容含不适当词汇（昵称/对象/正文），请修改后再发 ✍️");return}
 
 /* 修复 B：限流——同一 user_key 两次发帖间隔 */
