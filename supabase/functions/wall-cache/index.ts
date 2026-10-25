@@ -10,6 +10,14 @@ const SUPA_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 let cache = { ts: 0, wall: [], visitCount: 0, badWords: [], gifts: [] };
 const TTL = 60000;
 
+function timingEqual(a: ArrayBuffer, b: ArrayBuffer): boolean {
+  if (a.byteLength !== b.byteLength) return false;
+  let r = 0;
+  const va = new Uint8Array(a), vb = new Uint8Array(b);
+  for (let i = 0; i < va.length; i++) r |= va[i] ^ vb[i];
+  return r === 0;
+}
+
 function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -26,11 +34,23 @@ Deno.serve(async (req) => {
     return new Response("ok", { status: 200, headers: { ...cors() } });
   }
 
-  // 管理鉴权：前端不再存明文密码，改由 Edge 环境变量 ADMIN_PWD 校验
-  const adminPwd = url.searchParams.get("admin");
+  // 管理鉴权：POST body {admin,act,id}，密码不入 URL（防访问日志泄漏）
+  let adminPwd = "";
+  if (req.method === "POST") {
+    try { const body = await req.json(); adminPwd = String(body.admin || ""); } catch (_) {}
+  }
+  const adminPwdParam = url.searchParams.get("admin"); // 兼容旧 query
+  adminPwd = adminPwd || adminPwdParam || "";
   if (adminPwd) {
     const expected = Deno.env.get("ADMIN_PWD") || "";
-    if (adminPwd !== expected || !expected) {
+    // 时序安全比较：先 hash 再比，防 timing attack
+    const enc = new TextEncoder();
+    const [hA, hE] = await Promise.all([
+      crypto.subtle.digest("SHA-256", enc.encode(adminPwd)),
+      crypto.subtle.digest("SHA-256", enc.encode(expected || "___none___"))
+    ]);
+    const cmp = timingEqual(hA, hE);
+    if (!cmp || !expected || adminPwd.length !== expected.length) {
       return new Response(JSON.stringify({ ok:false, err:"admin auth" }), { status:200, headers:{ "Content-Type":"application/json", ...cors() } });
     }
     const act = url.searchParams.get("act") || "hide"; // hide=隐藏 del=彻底删除
