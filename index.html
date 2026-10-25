@@ -258,23 +258,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;letter-spacing:2px;m
     <div class="heart-badge">❤️</div>
     <h1>我的专属表白墙</h1>
     <div class="sub">LOVE WALL · 把想说的话，贴到墙上</div>
-  </header>  <div class="entry-cards">
-    <a class="entry-card ec-pink" href="xiaohua-wall.html"><span class="ec-ico">🌸</span><span class="ec-t">校花之墙</span><span class="ec-d">同学传照片 · 投票</span></a>
-    <a class="entry-card ec-blue" href="xiaocao-wall.html"><span class="ec-ico">🌿</span><span class="ec-t">校草之墙</span><span class="ec-d">同学传照片 · 投票</span></a>
-  </div><style id="entry-css">
-.entry-cards{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin:2px 0 18px}
-.entry-card{display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:14px 20px;text-decoration:none;box-shadow:0 10px 24px rgba(0,0,0,.06);border:1.5px solid transparent;transition:.2s;min-width:200px}
-.entry-card .ec-ico{font-size:1.5rem}
-.entry-card .ec-t{font-weight:700;font-size:1rem;letter-spacing:1px}
-.entry-card .ec-d{font-size:.72rem;letter-spacing:1px;opacity:.7}
-.ec-pink{color:#e0498f;border-color:rgba(224,73,143,.35)}
-.ec-pink:hover{background:#e0498f;color:#fff;transform:translateY(-2px)}
-.ec-pink:hover .ec-t{color:#fff}
-.ec-blue{color:#3b6fd6;border-color:rgba(59,111,214,.35)}
-.ec-blue:hover{background:#3b6fd6;color:#fff;transform:translateY(-2px)}
-.ec-blue:hover .ec-t{color:#fff}
-body.dark .entry-card{background:#2a1018}
-</style>
+  </header>
     <div class="toggle-bar">
     <button class="toggle-btn" id="themeBtn">🌙 深色模式</button>
     <button class="toggle-btn" id="musicBtn">🎵 开启音乐</button>
@@ -390,10 +374,14 @@ body.dark .entry-card{background:#2a1018}
 </div>
 <button class="music-fab" id="musicFab" title="背景音乐">🎵</button>
 <div class="toast" id="toast"></div>
-<audio id="bgm" loop preload="auto"></audio><script>;
+<audio id="bgm" loop preload="none"></audio><script>;
 const SUPA_URL="https://dpceuvqtwvhoipxhozxz.supabase.co";
 const SUPA_KEY="sb_publishable_lgsJvhLEHOG9oM1aXH7y1A_pgdmezyA";
 const sb=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+/* Edge 缓存层：优先走 /functions/v1/wall-cache（藏 service key + 60s 缓存），失败自动回退直连数据库 */
+const EDGE_URL=SUPA_URL+"/functions/v1/wall-cache";
+let __edgeOk=true;let __edgeGifts=null;
+async function edgeFetch(limit){const u=EDGE_URL+"?limit="+limit;const r=await fetch(u,{headers:{apikey:SUPA_KEY,Authorization:"Bearer "+SUPA_KEY}});if(!r.ok)throw new Error("edge "+r.status);const j=await r.json();if(!j||!j.ok)throw new Error("edge bad");return j}
 const ADMIN_PWD="xiaobao1213";
 /* 修复 D：海报/二维码指向单条（?post=id），扫出来能直达定位 */
 const SITE_BASE=(location.protocol==="http:"||location.protocol==="https:")?location.origin+"/":"https://love-wall.pages.dev/";
@@ -424,7 +412,14 @@ function userKey(){let k=localStorage.getItem("wallUserKey");if(!k){k="u"+Math.r
 function keyOf(c){return c.fromG+c.toG}
 function groupOf(c){return c.fromG==="男"?"male":"female"}
 function loadState(msg,spin){const el=document.getElementById("loadState");if(!el)return;el.className="loading"+(spin?"":" error");el.innerHTML=(spin?'<span class="spin"></span>':'')+msg}
-async function load(){busy=true;const lim=shownCount>=PAGE?500:PAGE;const {data,error}=await sb.from("wall").select("*").eq("status","ok").order("created_ts",{ascending:false}).limit(lim);busy=false;if(error){console.error(error);loadState("加载失败，点击重试",false);document.getElementById("loadState").onclick=load}else if(data){wall=data.map(r=>({id:r.id,name:r.nickname||"匿名",to:r.target_name||"心里的那个人",year:r.grade_year||"2027",cls:r.class_no||"1",tag:r.love_tag||"喜欢",fromG:r.sender_gender||"男",toG:r.target_gender||"男",msg:r.love_msg||"",likes:r.like_count||0,ts:r.created_ts||Date.now(),anon:r.nickname=="",gift:r.gift||"",dislikes:r.dislike_count||0}));const gq=await sb.from("card_gifts").select("wall_id,gift");giftByWall={};(gq.data||[]).forEach(x=>{(giftByWall[x.wall_id]=giftByWall[x.wall_id]||[]).push(x.gift)});shownCount=PAGE;render()}else{loadState("这里还没有表白，快写下第一条吧",false)}}
+async function load(){busy=true;const lim=shownCount>=PAGE?500:PAGE;
+if(__edgeOk){try{const j=await edgeFetch(lim);
+wall=(j.wall||[]).map(r=>({id:r.id,name:r.nickname||"匿名",to:r.target_name||"心里的那个人",year:r.grade_year||"2027",cls:r.class_no||"1",tag:r.love_tag||"喜欢",fromG:r.sender_gender||"男",toG:r.target_gender||"男",msg:r.love_msg||"",likes:r.like_count||0,ts:r.created_ts||Date.now(),anon:r.nickname=="",gift:r.gift||"",dislikes:r.dislike_count||0}));
+if((j.gifts||[]).length){giftByWall={};(j.gifts).forEach(x=>{(giftByWall[x.wall_id]=giftByWall[x.wall_id]||[]).push(x.gift)})}
+if((j.badWords||[]).length){BAD_WORDS.length=0;j.badWords.forEach(function(w){if(w)BAD_WORDS.push(w)})}
+const vse=document.getElementById("stVisit");if(vse&&j.visitCount!=null)vse.textContent=j.visitCount;
+busy=false;shownCount=PAGE;render();return;}catch(e){__edgeOk=false;console.log("edge fallback:",e&&e.message)}}
+const {data,error}=await sb.from("wall").select("*").eq("status","ok").order("created_ts",{ascending:false}).limit(lim);busy=false;if(error){console.error(error);loadState("加载失败，点击重试",false);document.getElementById("loadState").onclick=load}else if(data){wall=data.map(r=>({id:r.id,name:r.nickname||"匿名",to:r.target_name||"心里的那个人",year:r.grade_year||"2027",cls:r.class_no||"1",tag:r.love_tag||"喜欢",fromG:r.sender_gender||"男",toG:r.target_gender||"男",msg:r.love_msg||"",likes:r.like_count||0,ts:r.created_ts||Date.now(),anon:r.nickname=="",gift:r.gift||"",dislikes:r.dislike_count||0}));const gq=await sb.from("card_gifts").select("wall_id,gift");giftByWall={};(gq.data||[]).forEach(x=>{(giftByWall[x.wall_id]=giftByWall[x.wall_id]||[]).push(x.gift)});shownCount=PAGE;render()}else{loadState("这里还没有表白，快写下第一条吧",false)}}
 /* 修复 C：统计"署名的人"只算有昵称的，匿名不算重名 */
 function stats(){document.getElementById("stMsg").textContent=wall.length;document.getElementById("stPeople").textContent=new Set(wall.filter(x=>x.name&&x.name!=="匿名"&&x.name!=="神秘人").map(x=>x.name)).size;document.getElementById("stLove").textContent=wall.reduce((a,b)=>a+(b.likes||0),0)}
 async function loadVisits(){try{const {count}=await sb.from("visits").select("id",{count:"exact",head:true});document.getElementById("stVisit").textContent=(count||0)}catch(e){}}
