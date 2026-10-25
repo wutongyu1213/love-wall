@@ -26,6 +26,27 @@ Deno.serve(async (req) => {
     return new Response("ok", { status: 200, headers: { ...cors() } });
   }
 
+  // 管理鉴权：前端不再存明文密码，改由 Edge 环境变量 ADMIN_PWD 校验
+  const adminPwd = url.searchParams.get("admin");
+  if (adminPwd) {
+    const expected = Deno.env.get("ADMIN_PWD") || "";
+    if (adminPwd !== expected || !expected) {
+      return new Response(JSON.stringify({ ok:false, err:"admin auth" }), { status:200, headers:{ "Content-Type":"application/json", ...cors() } });
+    }
+    const act = url.searchParams.get("act") || "hide"; // hide=隐藏 del=彻底删除
+    const id = url.searchParams.get("id");
+    if (!id) return new Response(JSON.stringify({ ok:false, err:"no id" }), { status:200, headers:{ "Content-Type":"application/json", ...cors() } });
+    const base2 = `${SUPA_URL}/rest/v1`;
+    const hdr2 = { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type":"application/json" };
+    if (act === "del") {
+      const d = await fetch(`${base2}/wall?id=eq.${id}`, { method:"DELETE", headers:hdr2 });
+      return new Response(JSON.stringify({ ok:d.ok, deleted:d.ok }), { status:200, headers:{ "Content-Type":"application/json", ...cors() } });
+    } else {
+      const u = await fetch(`${base2}/wall?id=eq.${id}`, { method:"PATCH", headers:hdr2, body:JSON.stringify({ status:"hidden" }) });
+      return new Response(JSON.stringify({ ok:u.ok, hidden:u.ok }), { status:200, headers:{ "Content-Type":"application/json", ...cors() } });
+    }
+  }
+
   const lim = Math.min(parseInt(url.searchParams.get("limit") || "30", 10) || 30, 500);
   const now = Date.now();
 
@@ -52,16 +73,13 @@ Deno.serve(async (req) => {
     if (!wallResp.ok) throw new Error("wall fetch " + wallResp.status);
     const wall = await wallResp.json();
 
-    // 2) 访问数
+    // 2) 访问数（改用聚合表 visit_counter 单行 O(1)，visits 表行数有界后不再膨胀）
     let visitCount = 0;
     try {
-      const visitResp = await fetch(`${base}/visits?select=id&limit=1`, {
-        headers: { ...hdr, "Prefer": "count=exact", "Range": "0-0" },
-      });
-      if (visitResp.ok) {
-        const cr = visitResp.headers.get("content-range") || "";
-        const m = cr.split("/");
-        visitCount = m.length > 1 ? (parseInt(m[1], 10) || 0) : 0;
+      const vcResp = await fetch(`${base}/visit_counter?id=eq.1&select=total`, { headers: hdr });
+      if (vcResp.ok) {
+        const vcRows = await vcResp.json();
+        visitCount = (vcRows && vcRows[0]) ? (parseInt(vcRows[0].total, 10) || 0) : 0;
       }
     } catch (_) {}
 
