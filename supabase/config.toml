@@ -1,0 +1,4 @@
+[project]
+nid = "love-wall"
+
+# supabase edge function wall-cache 允许匿名（CORS 已放宽）
