@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -248,7 +248,9 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;letter-spacing:2px;m
 .giftq-box .gg{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px}
 .giftq-box button.gb{width:50px;height:50px;font-size:24px;background:#fff7f9;border:2px solid #ffd6e0;border-radius:12px;cursor:pointer;padding:0}
 .giftq-box button.gb:hover{border-color:#ff4d6d;transform:translateY(-2px)}
-.giftq-act{display:flex;gap:8px;justify-content:center}</style>
+.giftq-act{display:flex;gap:8px;justify-content:center}@media(max-width:560px){.compose-body{display:none}.compose.expanded .compose-body{display:block}.compose h2{cursor:pointer;user-select:none}.compose h2::after{content:"展开 ▾";float:right;font-size:.8rem;color:var(--muted);font-weight:normal}.compose.expanded h2::after{content:"收起 ▴"}}
+@media(min-width:561px){.compose-body{display:block!important}}
+</style>
 </head><body>
 <div class="love-float" id="floatLayer"></div>
 <div class="wrap">
@@ -273,7 +275,8 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;letter-spacing:2px;m
     <div class="lg"><span class="dotp"></span>女 → 男 / 女 → 女（粉色区）</div>
   </div>
   <section class="compose">
-    <h2><span class="dot"></span>写一条表白</h2>
+    <h2 id="composeToggle"><span class="dot"></span>写一条表白</h2>
+    <div class="compose-body" id="composeBody">
     <div class="anon-row">
       <input type="checkbox" id="inAnon">
       <label for="inAnon" style="margin:0">完全匿名（署名显示为"神秘人"）</label>
@@ -314,6 +317,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;letter-spacing:2px;m
       <span class="chip">想你了 🌙</span>
     </div>
     <button class="btn" id="postBtn">贴上表白墙 →</button>
+    </div>
   </section>
   <div class="main-grid">
     <aside class="rank-panel" id="rankPanel"><h3>🏆 人气排行榜</h3><div class="rank-list" id="rankList"><div class="rank-empty">还没有表白，快写下第一条</div></div></aside>
@@ -498,7 +502,7 @@ document.getElementById("dlPoster").onclick=()=>{const a=document.createElement(
 document.getElementById("closePoster").onclick=()=>document.getElementById("posterModal").classList.remove("show");
 document.getElementById("posterModal").onclick=(e)=>{if(e.target.id==="posterModal")document.getElementById("posterModal").classList.remove("show")}
 /* 匿名勾选联动 */
-document.getElementById("inAnon").onchange=function(){if(this.checked)document.getElementById("inName").value=""};let pickedGift="";(function(){document.querySelectorAll("#giftGrid .gift-btn").forEach(function(b){b.onclick=function(){if(pickedGift===b.dataset.gift){pickedGift="";b.classList.remove("on");return}pickedGift=b.dataset.gift;document.querySelectorAll("#giftGrid .gift-btn").forEach(function(x){x.classList.remove("on")});b.classList.add("on")}})})();document.addEventListener("DOMContentLoaded",function(){var m=document.getElementById("noticeModal");if(!m)return;document.getElementById("noticeCancel").onclick=function(){m.classList.remove("show")};document.getElementById("noticeOk").onclick=function(){localStorage.setItem("wallNoticeSeen",String(Date.now()));m.classList.remove("show")};m.onclick=function(e){if(e.target===m)m.classList.remove("show")};var seen=parseInt(localStorage.getItem("wallNoticeSeen")||"0",10);if(Date.now()-seen>=300000)m.classList.add("show")});
+document.getElementById("inAnon").onchange=function(){if(this.checked)document.getElementById("inName").value=""};let pickedGift="";(function(){document.querySelectorAll("#giftGrid .gift-btn").forEach(function(b){b.onclick=function(){if(pickedGift===b.dataset.gift){pickedGift="";b.classList.remove("on");return}pickedGift=b.dataset.gift;document.querySelectorAll("#giftGrid .gift-btn").forEach(function(x){x.classList.remove("on")});b.classList.add("on")}})})();document.addEventListener("DOMContentLoaded",function(){var m=document.getElementById("noticeModal");if(!m)return;document.getElementById("noticeCancel").onclick=function(){m.classList.remove("show")};document.getElementById("noticeOk").onclick=function(){localStorage.setItem("wallNoticeSeen",String(Date.now()));m.classList.remove("show")};m.onclick=function(e){if(e.target===m)m.classList.remove("show")};var seen=parseInt(localStorage.getItem("wallNoticeSeen")||"0",10);if(Date.now()-seen>=86400000)m.classList.add("show")});
 document.getElementById("postBtn").onclick=async()=>{if(busy)return;
 const anon=document.getElementById("inAnon").checked;
 let name=document.getElementById("inName").value.trim();if(anon)name="神秘人";
@@ -547,10 +551,11 @@ function celebrate(){const w=document.querySelector(".compose").getBoundingClien
 function burst(x,y,n){for(let i=0;i<n;i++){const d=document.createElement("div");d.textContent="❤";d.style.cssText="position:fixed;left:"+x+"px;top:"+y+"px;color:#ff4d6d;font-size:"+(14+Math.random()*16)+"px;pointer-events:none;z-index:60;animation:rise2 .9s ease-out forwards";document.body.appendChild(d);const ang=Math.random()*Math.PI*2,dist=40+Math.random()*80;d.style.setProperty("--dx",Math.cos(ang)*dist+"px");d.style.setProperty("--dy",Math.sin(ang)*dist+"px");setTimeout(()=>d.remove(),950)}}
 const st=document.createElement("style");st.textContent="@keyframes rise2{from{transform:translate(0,0);opacity:1}to{transform:translate(var(--dx,0),-120px) scale(.4);opacity:0}}";document.head.appendChild(st);
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
-makeFloatLayer();loadBadWords();Promise.all([load(),loadVisits(),recordVisit()]);
-setInterval(load,60000);
+makeFloatLayer();(function(){var tg=document.getElementById("composeToggle");if(!tg)return;tg.onclick=function(){if(window.innerWidth>560)return;document.querySelector(".compose").classList.toggle("expanded");};})();loadBadWords();Promise.all([load(),loadVisits(),recordVisit()]);
+(function(){try{var ch=sb.channel("love-wall-rt").on("postgres_changes",{event:"*",schema:"public",table:"wall"},function(){rt()}).on("postgres_changes",{event:"*",schema:"public",table:"likes"},function(){rt()}).on("postgres_changes",{event:"*",schema:"public",table:"card_gifts"},function(){rt()}).on("postgres_changes",{event:"*",schema:"public",table:"visits"},function(){rt()}).subscribe(function(s){console.log("realtime:",s)});window.__wallRt=ch;}catch(e){console.log("realtime init failed, fallback to polling",e)}})();var __rtT=null;function rt(){if(document.hidden)return;if(__rtT)return;__rtT=setTimeout(function(){__rtT=null;load();},3000);}
+setInterval(load,300000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){load();loadVisits()}});
 </script>
-<div class="notice-overlay" id="noticeModal"><div class="notice-card"><div class="notice-head"><span class="nicon">📢</span><h3>公告</h3></div><div class="notice-poem">偶然的相遇，让平淡的日子多了一束光。<br>犹豫了很久，还是想在这里写下心动。<br>或许你不会看见，但若刚好是你，<br>我想告诉你：我很喜欢你。</div><div class="notice-tip"><b>💡 说明</b>　本表白墙为个人自制，制作不易。大家有需求或者觉得需要改进的地方都可以提出来。请大家不要恶意捣乱、乱发无关内容，本表白墙仅限<b class="school">重庆第二外国语学校</b>的同学使用，其他学校同学请勿投稿。希望大家心怀公德，文明发言，一起好好维护这里。</div><div class="notice-foot"><span class="nhint">点击"我已阅读"后，5分钟内不再弹出</span><button id="noticeCancel" class="nbtn ghost">✕ 取消</button><button id="noticeOk" class="nbtn solid">✓ 我已阅读</button></div></div></div>
+<div class="notice-overlay" id="noticeModal"><div class="notice-card"><div class="notice-head"><span class="nicon">📢</span><h3>公告</h3></div><div class="notice-poem">偶然的相遇，让平淡的日子多了一束光。<br>犹豫了很久，还是想在这里写下心动。<br>或许你不会看见，但若刚好是你，<br>我想告诉你：我很喜欢你。</div><div class="notice-tip"><b>💡 说明</b>　本表白墙为个人自制，制作不易。大家有需求或者觉得需要改进的地方都可以提出来。请大家不要恶意捣乱、乱发无关内容，本表白墙仅限<b class="school">重庆第二外国语学校</b>的同学使用，其他学校同学请勿投稿。希望大家心怀公德，文明发言，一起好好维护这里。</div><div class="notice-foot"><span class="nhint">点击"我已阅读"后，24 小时内不再弹出</span><button id="noticeCancel" class="nbtn ghost">✕ 取消</button><button id="noticeOk" class="nbtn solid">✓ 我已阅读</button></div></div></div>
 </body>
 </html>
