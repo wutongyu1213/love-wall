@@ -258,7 +258,23 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;letter-spacing:2px;m
     <div class="heart-badge">❤️</div>
     <h1>我的专属表白墙</h1>
     <div class="sub">LOVE WALL · 把想说的话，贴到墙上</div>
-  </header>
+  </header>  <div class="entry-cards">
+    <a class="entry-card ec-pink" href="xiaohua-wall.html"><span class="ec-ico">🌸</span><span class="ec-t">校花之墙</span><span class="ec-d">同学传照片 · 投票</span></a>
+    <a class="entry-card ec-blue" href="xiaocao-wall.html"><span class="ec-ico">🌿</span><span class="ec-t">校草之墙</span><span class="ec-d">同学传照片 · 投票</span></a>
+  </div><style id="entry-css">
+.entry-cards{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin:2px 0 18px}
+.entry-card{display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:14px 20px;text-decoration:none;box-shadow:0 10px 24px rgba(0,0,0,.06);border:1.5px solid transparent;transition:.2s;min-width:200px}
+.entry-card .ec-ico{font-size:1.5rem}
+.entry-card .ec-t{font-weight:700;font-size:1rem;letter-spacing:1px}
+.entry-card .ec-d{font-size:.72rem;letter-spacing:1px;opacity:.7}
+.ec-pink{color:#e0498f;border-color:rgba(224,73,143,.35)}
+.ec-pink:hover{background:#e0498f;color:#fff;transform:translateY(-2px)}
+.ec-pink:hover .ec-t{color:#fff}
+.ec-blue{color:#3b6fd6;border-color:rgba(59,111,214,.35)}
+.ec-blue:hover{background:#3b6fd6;color:#fff;transform:translateY(-2px)}
+.ec-blue:hover .ec-t{color:#fff}
+body.dark .entry-card{background:#2a1018}
+</style>
     <div class="toggle-bar">
     <button class="toggle-btn" id="themeBtn">🌙 深色模式</button>
     <button class="toggle-btn" id="musicBtn">🎵 开启音乐</button>
